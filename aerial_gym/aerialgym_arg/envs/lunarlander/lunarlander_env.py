@@ -1,20 +1,7 @@
 import numpy as np
-from aerial_gym.registry.sim_registry import sim_registry
-from aerial_gym.simulation.sim_params import BaseSimParams, BaseSimConfig
+from aerial_gym.config.env_config.env_with_obstacles import EnvWithObstaclesCfg
 
-class LunarLanderParamsFallingForwards(BaseSimParams):
-    class sim(BaseSimConfig.sim):
-        dt = 0.01  # Custom Parameter
-        gravity = [0.0, 0.0, -1.0]
-
-
-# register your custom class here
-sim_registry.register_sim_params("lunar_world", LunarLanderParamsFallingForwards)
-
-### use the registered class further in the code to spawn a simulation ###
-
-
-class LunarLanderSimulation:
+class LunarLanderSimulation(EnvWithObstaclesCfg):
     def __init__(self, config):
         self.gravity = config['physics']['gravity']
         self.fuel = config['fuel']
