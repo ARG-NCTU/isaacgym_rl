@@ -8,7 +8,7 @@ TAG="isaacgym"
 IMG="${REPOSITORY}:${TAG}"
 
 USER_NAME="arg"
-REPO_NAME="isaacgym_lunarlander"
+REPO_NAME="isaacgym_rl"
 CONTAINER_NAME="isaacgym_ws"
 
 CONTAINER_ID=$(docker ps -aqf "ancestor=${IMG}")
