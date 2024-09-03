@@ -1,0 +1,15 @@
+sensors:
+  - name: position_sensor
+    type: state
+    parameters:
+      tracked_variable: 'position'
+
+  - name: velocity_sensor
+    type: state
+    parameters:
+      tracked_variable: 'velocity'
+
+  - name: fuel_sensor
+    type: state
+    parameters:
+      tracked_variable: 'fuel'
