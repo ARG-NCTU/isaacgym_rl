@@ -3,8 +3,20 @@ from aerial_gym.utils.logging import CustomLogger
 logger = CustomLogger(__name__)
 from aerial_gym.sim.sim_builder import SimBuilder
 import torch
-from aerialgym_arg import init_package
-init_package()
+from aerial_gym.registry.sim_registry import sim_config_registry
+from aerial_gym.registry.env_registry import env_config_registry
+import aerialgym_arg
+# from envs.lunarlander.lunarlander_sim import LunarPhyx
+# from envs.lunarlander.lunarlander_env import LunarEnvCfg
+
+# def init_package():
+#     print("Initializing package aerialgym_arg")
+#     sim_config_registry.register(sim_name="lunar_phyx", sim_config=LunarPhyx)
+#     env_config_registry.register(env_name="lunar_env", env_config=LunarEnvCfg)
+
+# init_package()
+# from aerialgym_arg import init_package
+# init_package()
 
 if __name__ == "__main__":
     logger.debug("this is how a debug message looks like")
@@ -18,7 +30,7 @@ if __name__ == "__main__":
         robot_name="base_quadrotor",  # "base_octarotor"
         controller_name="lee_acceleration_control",
         args=None,
-        num_envs=16,
+        num_envs=1,
         device="cuda:0",
         headless=False,
         use_warp=True,  # safer to use warp as it disables the camera when no object is in the environment

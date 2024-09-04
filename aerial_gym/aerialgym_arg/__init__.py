@@ -1,8 +1,8 @@
 from aerial_gym.registry.sim_registry import sim_config_registry
 from aerial_gym.registry.env_registry import env_config_registry
 
-from aerialgym_arg.envs.lunarlander.lunarlander_sim import LunarPhyx
-from aerialgym_arg.envs.lunarlander.lunarlander_env import LunarEnvCfg
+from envs.lunarlander.lunarlander_sim import LunarPhyx
+from envs.lunarlander.lunarlander_env import LunarEnvCfg
 
 def init_package():
     print("Initializing package aerialgym_arg")
