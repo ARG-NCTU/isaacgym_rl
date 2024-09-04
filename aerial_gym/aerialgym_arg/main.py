@@ -20,7 +20,7 @@ if __name__ == "__main__":
         robot_name="base_quadrotor",  # "base_octarotor"
         controller_name="lee_acceleration_control",
         args=None,
-        num_envs=1,
+        num_envs=2,
         device="cuda:0",
         headless=False,
         use_warp=True,  # safer to use warp as it disables the camera when no object is in the environment
@@ -36,4 +36,5 @@ if __name__ == "__main__":
             env_manager.reset()
         env_manager.step(actions=actions)
         env_manager.render()
+        print(env_manager.get_obs()['robot_state_tensor'])
         env_manager.reset_terminated_and_truncated_envs()

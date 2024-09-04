@@ -26,9 +26,9 @@ class LunarLanderI1(gym.Env):
                  ):
 
         ############ gymnasium ############
-        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32, seed=seed)
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=torch.tensor, seed=seed)
         self.observation_space = gym.spaces.Dict({
-            'uav_gazebo_pose': gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1, 4), dtype=np.float32, seed=seed),
+            'robot_state': gym.spaces.Box(low=-1.0, high=1, shape=(13,), dtype=torch.tensor, seed=seed),
         })
 
         self.counter_step = 0
@@ -95,7 +95,7 @@ class LunarLanderI1(gym.Env):
         pass
     
     def __get_observation(self):
-        pass
+        return self.gym_env.get_obs()['robot_state_tensor']
 
     def __get_info(self):
         pass
