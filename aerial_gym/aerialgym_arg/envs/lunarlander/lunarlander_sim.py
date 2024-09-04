@@ -1,7 +1,7 @@
 import numpy as np
 from aerial_gym.sim import BaseSimConfig
 
-class LunarPhyx(BaseSimConfig):
+class LunarLanderPhyx(BaseSimConfig):
     class sim(BaseSimConfig.sim):
         dt = 0.01  # Custom Parameter
         gravity = [0.0, 0.0, -1.0]

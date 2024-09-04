@@ -1,4 +1,4 @@
-from .lunarlander_sim import LunarPhyx
-from .lunarlander_env import LunarEnvCfg
+from .lunarlander_sim import LunarLanderPhyx
+from .lunarlander_env import LunarLanderEnvCfg
 
-__all__ = ['LunarPhyx', 'LunarEnvCfg']
+__all__ = ['LunarLanderPhyx', 'LunarLanderEnvCfg']

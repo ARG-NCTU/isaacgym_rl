@@ -8,7 +8,7 @@ from aerial_gym.config.env_config.env_with_obstacles import EnvWithObstaclesCfg
 
 import numpy as np
 
-class LunarEnvCfg(EnvWithObstaclesCfg):
+class LunarLanderEnvCfg(EnvWithObstaclesCfg):
     pass
     # class env:
     #     num_envs = 64
