@@ -171,12 +171,76 @@ class LunarLanderI1(gym.Env):
             }
         )
 
-        self.counter_step = 0
-        self.counter_total_step = 0
-        self.counter_episode = 0
-        self.episode_reward = 0.0
-        ############ gymnasium ############
+        self.target_position = torch.zeros(
+            (self.sim_env.num_envs, 3), device=self.device, requires_grad=False
+        )
 
+        self.target_min_ratio = torch.tensor(
+            self.task_config.target_min_ratio, device=self.device, requires_grad=False
+        ).expand(self.sim_env.num_envs, -1)
+        self.target_max_ratio = torch.tensor(
+            self.task_config.target_max_ratio, device=self.device, requires_grad=False
+        ).expand(self.sim_env.num_envs, -1)
+
+        self.success_aggregate = 0
+        self.crashes_aggregate = 0
+        self.timeouts_aggregate = 0
+        self.pos_error_vehicle_frame_prev = torch.zeros_like(self.target_position)
+        self.pos_error_vehicle_frame = torch.zeros_like(self.target_position)
+
+        if self.task_config.vae_config.use_vae:
+            self.vae_model = VAEImageEncoder(config=self.task_config.vae_config, device=self.device)
+            self.image_latents = torch.zeros(
+                (self.sim_env.num_envs, self.task_config.vae_config.latent_dims),
+                device=self.device,
+                requires_grad=False,
+            )
+        else:
+            self.vae_model = lambda x: x
+        ############ gymnasium ############
+        # Get the dictionary once from the environment and use it to get the observations later.
+        # This is to avoid constant retuning of data back anf forth across functions as the tensors update and can be read in-place.
+        self.obs_dict = self.sim_env.get_obs()
+        if "curriculum_level" not in self.obs_dict.keys():
+            self.curriculum_level = self.task_config.curriculum.min_level
+            self.obs_dict["curriculum_level"] = self.curriculum_level
+        else:
+            self.curriculum_level = self.obs_dict["curriculum_level"]
+        self.obs_dict["num_obstacles_in_env"] = self.curriculum_level
+        self.curriculum_progress_fraction = (
+            self.curriculum_level - self.task_config.curriculum.min_level
+        ) / (self.task_config.curriculum.max_level - self.task_config.curriculum.min_level)
+
+        self.terminations = self.obs_dict["crashes"]
+        self.truncations = self.obs_dict["truncations"]
+        self.rewards = torch.zeros(self.truncations.shape[0], device=self.device)
+
+        # Currently only the "observations" are sent to the actor and critic.
+        # The "priviliged_obs" are not handled so far in sample-factory
+
+        self.task_obs = {
+            "observations": torch.zeros(
+                (self.sim_env.num_envs, self.task_config.observation_space_dim),
+                device=self.device,
+                requires_grad=False,
+            ),
+            "priviliged_obs": torch.zeros(
+                (
+                    self.sim_env.num_envs,
+                    self.task_config.privileged_observation_space_dim,
+                ),
+                device=self.device,
+                requires_grad=False,
+            ),
+            "collisions": torch.zeros(
+                (self.sim_env.num_envs, 1), device=self.device, requires_grad=False
+            ),
+            "rewards": torch.zeros(
+                (self.sim_env.num_envs, 1), device=self.device, requires_grad=False
+            ),
+        }
+
+        self.num_task_steps = 0
 
     def step(self, action):
         self.counter_step += 1
@@ -255,6 +319,10 @@ class LunarLanderI1(gym.Env):
         self.task_obs["terminations"] = self.terminations
         self.task_obs["truncations"] = self.truncations
 
+    def __process_image_observation(self):
+        image_obs = self.obs_dict["depth_range_pixels"].squeeze(1)
+        self.image_latents[:] = self.vae_model.encode(image_obs)
+
     def __compute_rewards_and_crashes(self, obs_dict):
         robot_position = obs_dict["robot_position"]
         target_position = self.target_position
@@ -275,6 +343,47 @@ class LunarLanderI1(gym.Env):
             self.curriculum_progress_fraction,
             self.task_config.reward_parameters,
         )
+    
+    def __check_and_update_curriculum_level(self, successes, crashes, timeouts):
+        self.success_aggregate += torch.sum(successes)
+        self.crashes_aggregate += torch.sum(crashes)
+        self.timeouts_aggregate += torch.sum(timeouts)
+
+        instances = self.success_aggregate + self.crashes_aggregate + self.timeouts_aggregate
+
+        if instances >= self.task_config.curriculum.check_after_log_instances:
+            success_rate = self.success_aggregate / instances
+            crash_rate = self.crashes_aggregate / instances
+            timeout_rate = self.timeouts_aggregate / instances
+
+            if success_rate > self.task_config.curriculum.success_rate_for_increase:
+                self.curriculum_level += self.task_config.curriculum.increase_step
+            elif success_rate < self.task_config.curriculum.success_rate_for_decrease:
+                self.curriculum_level -= self.task_config.curriculum.decrease_step
+
+            # clamp curriculum_level
+            self.curriculum_level = min(
+                max(self.curriculum_level, self.task_config.curriculum.min_level),
+                self.task_config.curriculum.max_level,
+            )
+            self.obs_dict["curriculum_level"] = self.curriculum_level
+            self.obs_dict["num_obstacles_in_env"] = self.curriculum_level
+            self.curriculum_progress_fraction = (
+                self.curriculum_level - self.task_config.curriculum.min_level
+            ) / (self.task_config.curriculum.max_level - self.task_config.curriculum.min_level)
+
+            logger.warning(
+                f"Curriculum Level: {self.curriculum_level}, Curriculum progress fraction: {self.curriculum_progress_fraction}"
+            )
+            logger.warning(
+                f"\nSuccess Rate: {success_rate}\nCrash Rate: {crash_rate}\nTimeout Rate: {timeout_rate}"
+            )
+            logger.warning(
+                f"\nSuccesses: {self.success_aggregate}\nCrashes : {self.crashes_aggregate}\nTimeouts: {self.timeouts_aggregate}"
+            )
+            self.success_aggregate = 0
+            self.crashes_aggregate = 0
+            self.timeouts_aggregate = 0
     
 @torch.jit.script
 def compute_reward(
