@@ -1,8 +1,5 @@
-import os, sys, time
-
 from typing import Optional
 import numpy as np
-import yaml
 import gymnasium as gym
 from gymnasium import spaces
 from aerial_gym.utils.logging import CustomLogger
@@ -10,8 +7,6 @@ from aerial_gym.utils.logging import CustomLogger
 logger = CustomLogger(__name__)
 from aerial_gym.sim.sim_builder import SimBuilder
 import torch
-from aerial_gym.registry.sim_registry import sim_config_registry
-from aerial_gym.registry.env_registry import env_config_registry
 import aerialgym_arg
 
 
@@ -31,10 +26,9 @@ class LunarLanderI1(gym.Env):
                  ):
 
         ############ gymnasium ############
-        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(self.action_len,), dtype=np.float32, seed=seed)
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32, seed=seed)
         self.observation_space = gym.spaces.Dict({
-            'uav_action': gym.spaces.Box(low=-1, high=1, shape=(self.uav_act_hist_len, self.action_len), dtype=np.float32, seed=seed),
-            'uav_gazebo_pose': gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.uav_act_hist_len, 4), dtype=np.float32, seed=seed),
+            'uav_gazebo_pose': gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1, 4), dtype=np.float32, seed=seed),
         })
 
         self.counter_step = 0
@@ -55,8 +49,8 @@ class LunarLanderI1(gym.Env):
         logger.error("this is how an error message looks like")
         logger.critical("this is how a critical message looks like")
         self.gym_env = SimBuilder().build_env(
-            sim_name="lunar_phyx",
-            env_name="lunar_env",  # empty_env
+            sim_name="lunarlander_phyx",
+            env_name="lunarlander_env",  # empty_env
             robot_name="base_quadrotor",  # "base_octarotor"
             controller_name="lee_acceleration_control",
             args=None,
@@ -71,7 +65,13 @@ class LunarLanderI1(gym.Env):
         ############ isaacgym ############
 
     def step(self, action):
+        self.counter_step += 1
+        self.counter_total_step += 1
         self.gym_env.step(action)
+        state = self.__get_observation()
+        reward, terminated, truncated = self.__get_reward(action, self.counter_step)
+        info = self.__get_info()
+        return state, reward, terminated, truncated, info
 
     def render(self):
         if self.render_mode == "human":
@@ -91,14 +91,11 @@ class LunarLanderI1(gym.Env):
 
 ############### private functions ####################
 
-    def __get_reward(self, action, step):
+    def __get_reward(self):
         pass
-
+    
     def __get_observation(self):
         pass
 
     def __get_info(self):
-        pass
-
-    def __get_initial_state(self, name):
         pass

@@ -6,17 +6,7 @@ import torch
 from aerial_gym.registry.sim_registry import sim_config_registry
 from aerial_gym.registry.env_registry import env_config_registry
 import aerialgym_arg
-# from envs.lunarlander.lunarlander_sim import LunarPhyx
-# from envs.lunarlander.lunarlander_env import LunarEnvCfg
 
-# def init_package():
-#     print("Initializing package aerialgym_arg")
-#     sim_config_registry.register(sim_name="lunar_phyx", sim_config=LunarPhyx)
-#     env_config_registry.register(env_name="lunar_env", env_config=LunarEnvCfg)
-
-# init_package()
-# from aerialgym_arg import init_package
-# init_package()
 
 if __name__ == "__main__":
     logger.debug("this is how a debug message looks like")
@@ -25,8 +15,8 @@ if __name__ == "__main__":
     logger.error("this is how an error message looks like")
     logger.critical("this is how a critical message looks like")
     env_manager = SimBuilder().build_env(
-        sim_name="lunar_phyx",
-        env_name="lunar_env",  # empty_env
+        sim_name="lunarlander_phyx",
+        env_name="lunarlander_env",  # empty_env
         robot_name="base_quadrotor",  # "base_octarotor"
         controller_name="lee_acceleration_control",
         args=None,
@@ -43,7 +33,6 @@ if __name__ == "__main__":
     env_manager.reset()
     for i in range(1000):
         if i % 100 == 0:
-            print("i", i)
             env_manager.reset()
         env_manager.step(actions=actions)
         env_manager.render()

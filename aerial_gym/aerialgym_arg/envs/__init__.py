@@ -1,4 +1,7 @@
-from .lunarlander.lunarlander_sim import LunarPhyx
-from .lunarlander.lunarlander_env import LunarEnvCfg
+from .lunarlander.lunarlander_sim import LunarLanderPhyx
+from .lunarlander.lunarlander_env import LunarLanderEnvCfg
+from .lunarlander.lunarlander_sensor import LunarLanderSensorCfg
+from .lunarlander.lunarlander_task import LunarLanderTask
 
-__all__ = ['LunarPhyx', 'LunarEnvCfg']
+
+__all__ = ['LunarLanderPhyx', 'LunarLanderEnvCfg', 'LunarLanderSensorCfg', 'LunarLanderTask']
