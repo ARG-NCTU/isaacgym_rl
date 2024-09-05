@@ -5,7 +5,7 @@ from gymnasium import spaces
 from aerial_gym.utils.logging import CustomLogger
 import os, sys, time
 from abc import ABC, abstractmethod
-
+import pygame
 
 logger = CustomLogger(__name__)
 from aerial_gym.sim.sim_builder import SimBuilder
@@ -16,6 +16,8 @@ from aerial_gym.examples.dce_rl_navigation.dce_navigation_task import DCE_RL_Nav
 from aerial_gym.utils.vae.vae_image_encoder import VAEImageEncoder
 from aerial_gym.utils.logging import CustomLogger
 from aerial_gym.utils.math import *
+from aerial_gym import AERIAL_GYM_DIRECTORY
+
 
 logger = CustomLogger("LunarLanderI1")
 
@@ -23,79 +25,113 @@ def dict_to_class(dict):
     return type("ClassFromDict", (object,), dict)
 
 class task_config:
-    seed = 1
+    seed = -1
     sim_name = "lunarlander_phyx"
     env_name = "lunarlander_env"
     robot_name = "base_quadrotor"
-    controller_name = "lee_attitude_control"
+    controller_name = "lee_velocity_control"
     args = {}
-    num_envs = 16
-    use_warp = False
+    num_envs = 1
+    use_warp = True
     headless = False
     device = "cuda:0"
-    observation_space_dim = 13
+    # observation_space_dim = 13 + 4 + 64  # root_state + action_dim _+ latent_dims
+    observation_space_dim = 13 + 4  # root_state + action_dim _
     privileged_observation_space_dim = 0
     action_space_dim = 4
-    episode_len_steps = 500  # real physics time for simulation is this value multiplied by sim.dt
-    return_state_before_reset = False
+    episode_len_steps = 100  # real physics time for simulation is this value multiplied by sim.dt
+
+    return_state_before_reset = (
+        False  # False as usually state is returned for next episode after reset
+    )
+    # user can set the above to true if they so desire
+
+    target_min_ratio = [0.90, 0.1, 0.1]  # target ratio w.r.t environment bounds in x,y,z
+    target_max_ratio = [0.94, 0.90, 0.90]  # target ratio w.r.t environment bounds in x,y,z
+
     reward_parameters = {
-        "pos_error_gain1": [2.0, 2.0, 2.0],
-        "pos_error_exp1": [1 / 3.5, 1 / 3.5, 1 / 3.5],
-        "pos_error_gain2": [2.0, 2.0, 2.0],
-        "pos_error_exp2": [2.0, 2.0, 2.0],
-        "dist_reward_coefficient": 7.5,
-        "max_dist": 15.0,
-        "action_diff_penalty_gain": [1.0, 1.0, 1.0],
-        "absolute_action_reward_gain": [2.0, 2.0, 2.0],
-        "crash_penalty": -100,
+        "pos_reward_magnitude": 5.0,
+        "pos_reward_exponent": 1.0 / 3.5,
+        "very_close_to_goal_reward_magnitude": 5.0,
+        "very_close_to_goal_reward_exponent": 2.0,
+        "getting_closer_reward_multiplier": 10.0,
+        "x_action_diff_penalty_magnitude": 0.8,
+        "x_action_diff_penalty_exponent": 3.333,
+        "z_action_diff_penalty_magnitude": 0.8,
+        "z_action_diff_penalty_exponent": 5.0,
+        "yawrate_action_diff_penalty_magnitude": 0.8,
+        "yawrate_action_diff_penalty_exponent": 3.33,
+        "x_absolute_action_penalty_magnitude": 1.6,
+        "x_absolute_action_penalty_exponent": 0.3,
+        "z_absolute_action_penalty_magnitude": 1.5,
+        "z_absolute_action_penalty_exponent": 1.0,
+        "yawrate_absolute_action_penalty_magnitude": 1.5,
+        "yawrate_absolute_action_penalty_exponent": 2.0,
+        "collision_penalty": -20.0,
     }
 
-class BaseTask(ABC):
-    def __init__(self, task_config):
-        self.task_config = task_config
-        self.action_space = None
-        self.observation_space = None
-        self.reward_range = None
-        self.metadata = None
-        self.spec = None
+    class vae_config:
+        use_vae = True
+        latent_dims = 64
+        model_file = (
+            AERIAL_GYM_DIRECTORY
+            + "/aerial_gym/utils/vae/weights/ICRA_test_set_more_sim_data_kld_beta_3_LD_64_epoch_49.pth"
+        )
+        model_folder = AERIAL_GYM_DIRECTORY
+        # image_res = (270, 480)
+        image_res = (240)
+        interpolation_mode = "nearest"
+        return_sampled_latent = True
 
-        seed = task_config.seed
-        if seed == -1:
-            seed = time.time_ns() % (2**32)
-        self.seed(seed)
+    class curriculum:
+        min_level = 10
+        max_level = 45
+        check_after_log_instances = 2048
+        increase_step = 2
+        decrease_step = 1
+        success_rate_for_increase = 0.7
+        success_rate_for_decrease = 0.6
 
-    @abstractmethod
-    def render(self, mode="human"):
-        raise NotImplementedError
+        def update_curriculim_level(self, success_rate, current_level):
+            if success_rate > self.success_rate_for_increase:
+                return min(current_level + self.increase_step, self.max_level)
+            elif success_rate < self.success_rate_for_decrease:
+                return max(current_level - self.decrease_step, self.min_level)
+            return current_level
 
-    def seed(self, seed):
-        if seed is None or seed < 0:
-            logger.info(f"Seed is not valid. Will be sampled from system time.")
-            seed = time.time_ns() % (2**32)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        os.environ["PYTHONHASHSEED"] = str(seed)
+    def action_transformation_function(action):
+        clamped_action = torch.clamp(action, -1.0, 1.0)
+        max_speed = 2.0  # [m/s]
+        max_yawrate = torch.pi / 3  # [rad/s]
+        max_inclination_angle = torch.pi / 4  # [rad]
 
-        logger.info("Setting seed: {}".format(seed))
+        clamped_action[:, 0] += 1.0
 
-    @abstractmethod
-    def reset(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset_idx(self, env_ids):
-        raise NotImplementedError
-
-    @abstractmethod
-    def step(self, action):
-        raise NotImplementedError
-
-    @abstractmethod
-    def close(self):
-        raise NotImplementedError
+        processed_action = torch.zeros(
+            (clamped_action.shape[0], 4), device=task_config.device, requires_grad=False
+        )
+        processed_action[:, 0] = (
+            clamped_action[:, 0]
+            * torch.cos(max_inclination_angle * clamped_action[:, 1])
+            * max_speed
+            / 2.0
+        )
+        processed_action[:, 1] = 0
+        processed_action[:, 2] = (
+            clamped_action[:, 0]
+            * torch.sin(max_inclination_angle * clamped_action[:, 1])
+            * max_speed
+            / 2.0
+        )
+        processed_action[:, 3] = clamped_action[:, 2] * max_yawrate
+        yield processed_action
 
 class LunarLanderI1(gym.Env):
+
+    metadata = {
+                "render_modes": ["rgb_array", "human"],
+                "render_fps": 50,
+                }
 
     def __init__(
             self, 
@@ -104,7 +140,8 @@ class LunarLanderI1(gym.Env):
             num_envs=None, 
             headless=None, 
             device=None, 
-            use_warp=None
+            use_warp=None,
+            render_mode=None
             ):
         # overwrite the params if user has provided them
         if seed is not None:
@@ -118,9 +155,11 @@ class LunarLanderI1(gym.Env):
         if use_warp is not None:
             task_config.use_warp = use_warp
 
+        self.render_mode = render_mode
+        
         self.task_config = task_config
         self.reward_range = None
-        self.metadata = None
+        # self.metadata = None
         self.spec = None
 
         seed = task_config.seed
@@ -158,11 +197,11 @@ class LunarLanderI1(gym.Env):
         ############ isaacgym ############
 
         ############ gymnasium ############
-        self.action_space = gym.space.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
         self.action_transformation_function = self.task_config.action_transformation_function
-        self.observation_space = gym.space.Dict(
+        self.observation_space = gym.spaces.Dict(
             {
-                "observations": gym.space.Box(
+                "observations": gym.spaces.Box(
                     low=-1.0,
                     high=1.0,
                     shape=(self.task_config.observation_space_dim,),
@@ -242,20 +281,74 @@ class LunarLanderI1(gym.Env):
 
         self.num_task_steps = 0
 
-    def step(self, action):
-        self.counter_step += 1
-        self.counter_total_step += 1
-        self.sim_env.step(action)
-        state = self.__get_observation()
-        reward, terminated, truncated = self.__get_reward(action, self.counter_step)
-        info = self.__get_info()
-        return state, reward, terminated, truncated, info
+    def step(self, actions):
+        # this uses the action, gets observations
+        # calculates rewards, returns tuples
+        # In this case, the episodes that are terminated need to be
+        # first reset, and the first obseration of the new episode
+        # needs to be returned.
+
+        # transformed_action = self.action_transformation_function(actions)
+        transformed_action = actions
+
+        logger.debug(f"raw_action: {actions[0]}, transformed action: {transformed_action[0]}")
+        self.sim_env.step(actions=transformed_action)
+
+        # This step must be done since the reset is done after the reward is calculated.
+        # This enables the robot to send back an updated state, and an updated observation to the RL agent after the reset.
+        # This is important for the RL agent to get the correct state after the reset.
+        self.rewards[:], self.terminations[:] = self.__compute_rewards_and_crashes(self.obs_dict)
+
+        # logger.info(f"Curricluum Level: {self.curriculum_level}")
+
+        if self.task_config.return_state_before_reset == True:
+            return_tuple = self.__get_return_tuple()
+
+        self.truncations[:] = torch.where(
+            self.sim_env.sim_steps > self.task_config.episode_len_steps,
+            torch.ones_like(self.truncations),
+            torch.zeros_like(self.truncations),
+        )
+
+        # successes are are the sum of the environments which are to be truncated and have reached the target within a distance threshold
+        successes = self.truncations * (
+            torch.norm(self.target_position - self.obs_dict["robot_position"], dim=1) < 1.0
+        )
+        successes = torch.where(self.terminations > 0, torch.zeros_like(successes), successes)
+        timeouts = torch.where(
+            self.truncations > 0, torch.logical_not(successes), torch.zeros_like(successes)
+        )
+        timeouts = torch.where(
+            self.terminations > 0, torch.zeros_like(timeouts), timeouts
+        )  # timeouts are not counted if there is a crash
+
+        self.infos["successes"] = successes
+        self.infos["timeouts"] = timeouts
+        self.infos["crashes"] = self.terminations
+
+        self.__logging_sanity_check(self.infos)
+        self.__check_and_update_curriculum_level(
+            self.infos["successes"], self.infos["crashes"], self.infos["timeouts"]
+        )
+        # rendering happens at the post-reward calculation step since the newer measurement is required to be
+        # sent to the RL algorithm as an observation and it helps if the camera image is updated then
+        reset_envs = self.sim_env.post_reward_calculation_step()
+        if len(reset_envs) > 0:
+            self.reset_idx(reset_envs)
+        self.num_task_steps += 1
+        # do stuff with the image observations here
+        # self.__process_image_observation()
+        if self.task_config.return_state_before_reset == False:
+            return_tuple = self.__get_return_tuple()
+        return return_tuple
 
     def render(self):
         return self.sim_env.render()
 
     def reset(self, seed=None, options=None):
         self.reset_idx(torch.arange(self.sim_env.num_envs))
+        if self.render_mode == "rgb_array":
+            self.render()
         return self.__get_return_tuple()
 
     def reset_idx(self, env_ids):
@@ -285,20 +378,11 @@ class LunarLanderI1(gym.Env):
 
 ############### private functions ####################
 
-    def __get_reward(self):
-        return self.sim_env.get_obs()['reward'], False, self.sim_env.get_obs()['truncations']
-    
-    def __get_observation(self):
-        return {'robot_state': self.sim_env.get_obs()['robot_state_tensor'],
-                }
-
-    def __get_info(self):
-        return {}
     
     def __get_return_tuple(self):
         self.__process_obs_for_task()
         return (
-            self.task_obs,
+            {'observations': self.task_obs['observations']},
             self.rewards,
             self.terminations,
             self.truncations,
@@ -314,14 +398,18 @@ class LunarLanderI1(gym.Env):
         self.task_obs["observations"][:, 7:10] = self.obs_dict["robot_body_linvel"]
         self.task_obs["observations"][:, 10:13] = self.obs_dict["robot_body_angvel"]
         self.task_obs["observations"][:, 13:17] = self.obs_dict["robot_actions"]
-        self.task_obs["observations"][:, 17:] = self.image_latents
+        # self.task_obs["observations"][:, 17:] = self.image_latents
         self.task_obs["rewards"] = self.rewards
         self.task_obs["terminations"] = self.terminations
         self.task_obs["truncations"] = self.truncations
 
     def __process_image_observation(self):
+        image_obs = self.obs_dict["depth_range_pixels"]
+        print("=====================images_shape:",image_obs.shape)
         image_obs = self.obs_dict["depth_range_pixels"].squeeze(1)
+        print("=====================images_shape:",image_obs.shape)
         self.image_latents[:] = self.vae_model.encode(image_obs)
+        print("self.image_latents:",self.image_latents.shape)
 
     def __compute_rewards_and_crashes(self, obs_dict):
         robot_position = obs_dict["robot_position"]
@@ -384,6 +472,60 @@ class LunarLanderI1(gym.Env):
             self.success_aggregate = 0
             self.crashes_aggregate = 0
             self.timeouts_aggregate = 0
+
+    def __logging_sanity_check(self, infos):
+        successes = infos["successes"]
+        crashes = infos["crashes"]
+        timeouts = infos["timeouts"]
+        time_at_crash = torch.where(
+            crashes > 0,
+            self.sim_env.sim_steps,
+            self.task_config.episode_len_steps * torch.ones_like(self.sim_env.sim_steps),
+        )
+        env_list_for_toc = (time_at_crash < 5).nonzero(as_tuple=False).squeeze(-1)
+        crash_envs = crashes.nonzero(as_tuple=False).squeeze(-1)
+        success_envs = successes.nonzero(as_tuple=False).squeeze(-1)
+        timeout_envs = timeouts.nonzero(as_tuple=False).squeeze(-1)
+
+        if len(env_list_for_toc) > 0:
+            logger.critical("Crash is happening too soon.")
+            logger.critical(f"Envs crashing too soon: {env_list_for_toc}")
+            logger.critical(f"Time at crash: {time_at_crash[env_list_for_toc]}")
+
+        if torch.sum(torch.logical_and(successes, crashes)) > 0:
+            logger.critical("Success and crash are occuring at the same time")
+            logger.critical(
+                f"Number of crashes: {torch.count_nonzero(crashes)}, Crashed envs: {crash_envs}"
+            )
+            logger.critical(
+                f"Number of successes: {torch.count_nonzero(successes)}, Success envs: {success_envs}"
+            )
+            logger.critical(
+                f"Number of common instances: {torch.count_nonzero(torch.logical_and(crashes, successes))}"
+            )
+        if torch.sum(torch.logical_and(successes, timeouts)) > 0:
+            logger.critical("Success and timeout are occuring at the same time")
+            logger.critical(
+                f"Number of successes: {torch.count_nonzero(successes)}, Success envs: {success_envs}"
+            )
+            logger.critical(
+                f"Number of timeouts: {torch.count_nonzero(timeouts)}, Timeout envs: {timeout_envs}"
+            )
+            logger.critical(
+                f"Number of common instances: {torch.count_nonzero(torch.logical_and(successes, timeouts))}"
+            )
+        if torch.sum(torch.logical_and(crashes, timeouts)) > 0:
+            logger.critical("Crash and timeout are occuring at the same time")
+            logger.critical(
+                f"Number of crashes: {torch.count_nonzero(crashes)}, Crashed envs: {crash_envs}"
+            )
+            logger.critical(
+                f"Number of timeouts: {torch.count_nonzero(timeouts)}, Timeout envs: {timeout_envs}"
+            )
+            logger.critical(
+                f"Number of common instances: {torch.count_nonzero(torch.logical_and(crashes, timeouts))}"
+            )
+        return
     
 @torch.jit.script
 def compute_reward(

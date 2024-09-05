@@ -4,7 +4,6 @@ from aerial_gym.registry.env_registry import env_config_registry
 from .envs.lunarlander.lunarlander_sim import LunarLanderPhyx
 from .envs.lunarlander.lunarlander_env import LunarLanderEnvCfg
 from .envs.lunarlander.lunarlander_sensor import LunarLanderSensorCfg
-from .envs.lunarlander.lunarlander_task import LunarLanderTask
 
 def registring_lunarlander_package():
     print("Registring lunarlander config to aerialgym_arg")
