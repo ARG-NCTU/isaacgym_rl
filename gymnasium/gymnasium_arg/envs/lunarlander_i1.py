@@ -135,7 +135,7 @@ class LunarLanderI1(gym.Env):
 
     def __init__(
             self, 
-            task_config,
+            task_config=task_config,
             seed=None, 
             num_envs=None, 
             headless=None, 
