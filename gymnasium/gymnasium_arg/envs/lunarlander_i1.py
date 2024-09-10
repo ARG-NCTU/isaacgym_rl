@@ -4,15 +4,11 @@ import gymnasium as gym
 from gymnasium import spaces
 from aerial_gym.utils.logging import CustomLogger
 import os, sys, time
-from abc import ABC, abstractmethod
-import pygame
 
 logger = CustomLogger(__name__)
 from aerial_gym.sim.sim_builder import SimBuilder
 import torch
 import aerialgym_arg
-from aerial_gym.registry.task_registry import task_registry
-from aerial_gym.examples.dce_rl_navigation.dce_navigation_task import DCE_RL_Navigation_Task
 from aerial_gym.utils.vae.vae_image_encoder import VAEImageEncoder
 from aerial_gym.utils.logging import CustomLogger
 from aerial_gym.utils.math import *
@@ -290,7 +286,6 @@ class LunarLanderI1(gym.Env):
 
         # transformed_action = self.action_transformation_function(actions)
         transformed_action = actions
-
         logger.debug(f"raw_action: {actions[0]}, transformed action: {transformed_action[0]}")
         self.sim_env.step(actions=transformed_action)
 
@@ -340,7 +335,8 @@ class LunarLanderI1(gym.Env):
         # self.__process_image_observation()
         if self.task_config.return_state_before_reset == False:
             return_tuple = self.__get_return_tuple()
-        return return_tuple
+            
+        return return_tuple[0], return_tuple[1], return_tuple[2], return_tuple[3], return_tuple[4]
 
     def render(self):
         return self.sim_env.render()
@@ -349,7 +345,7 @@ class LunarLanderI1(gym.Env):
         self.reset_idx(torch.arange(self.sim_env.num_envs))
         if self.render_mode == "rgb_array":
             self.render()
-        return self.__get_return_tuple()
+        return self.__get_return_tuple()[0]
 
     def reset_idx(self, env_ids):
         target_ratio = torch_rand_float_tensor(self.target_min_ratio, self.target_max_ratio)
