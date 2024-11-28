@@ -61,22 +61,24 @@ class LunarLanderEnv:
         plane_params = gymapi.PlaneParams()
         plane_params.normal = gymapi.Vec3(0.0, 1.0, 0.0)  # Normal pointing upwards
         plane_params.distance = 0.0  # Plane at y = 0
-        plane_params.static_friction = 0.5
-        plane_params.dynamic_friction = 0.5
-        plane_params.restitution = 0.1
         self.gym.add_ground(self.sim, plane_params)
 
         # Load the URDF model
         asset_root = "."
         asset_file = self.urdf_path
         asset_options = gymapi.AssetOptions()
-        asset_options.fix_base_link = True  # Debug: Fix base link
-        asset_options.armature = 0.01  # Small armature for better stability
-        asset_options.flip_visual_attachments = False
+        asset_options.fix_base_link = False  # Allow the robot to fall freely
+        asset_options.armature = 0.01  # Small armature for stability
 
         lander_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
         if lander_asset is None:
             raise Exception(f"Failed to load asset from {asset_file}")
+
+        # Debug: Print the link names
+        link_names = self.gym.get_asset_rigid_body_names(lander_asset)
+        print("Rigid Body Link Names:")
+        for link_name in link_names:
+            print(link_name)
 
         # Create environments and place the lander in each
         for i in range(self.num_envs):
@@ -85,11 +87,20 @@ class LunarLanderEnv:
 
             start_pose = gymapi.Transform()
             start_pose.p = gymapi.Vec3(0.0, 10.0, 0.0)  # Start position above ground
-            start_pose.r = gymapi.Quat(0.0, 0.0, 0.0, 1.0)  # Identity quaternion
+            start_pose.r = gymapi.Quat(0.707, 0.0, 0.0, 0.707)  # 90° rotation about X-axis
 
             lander_handle = self.gym.create_actor(env, lander_asset, start_pose, "lander", i, 1)
             self.landers.append(lander_handle)
 
+            # Debug: Print actor properties after creating the actor
+            self._debug_actor_properties(env, lander_handle)
+
+    def _debug_actor_properties(self, env, actor_handle):
+        # Acquire the root state tensor for debugging
+        state = self.gym.get_actor_rigid_body_states(env, actor_handle, gymapi.STATE_ALL)
+        print("Actor Initial State:")
+        for i, body_state in enumerate(state):
+            print(f"Body {i}: Position = {body_state['pose']['p']}, Orientation = {body_state['pose']['r']}")
 
 
     def reset(self):
@@ -101,21 +112,21 @@ class LunarLanderEnv:
             self.root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
             self.root_states = gymtorch.wrap_tensor(self.root_state_tensor)
 
-        # Debug: Print initial state
-        print("Resetting states...")
-        print("Initial state:", self.root_states)
-
-        # Reset positions and velocities for all environments
+        # Reset positions, orientations, and velocities for all environments
         for i in range(self.num_envs):
             self.root_states[i, 0:3] = torch.tensor([0.0, 10.0, 0.0], device=self.sim_device)  # Position
-            self.root_states[i, 3:7] = torch.tensor([0.0, 0.0, 0.0, 1.0], device=self.sim_device)  # Orientation
+            self.root_states[i, 3:7] = torch.tensor([-0.707, 0.0, 0.0, 0.707], device=self.sim_device)  # Orientation (90° rotation about X-axis)
             self.root_states[i, 7:10] = 0.0  # Linear velocity
             self.root_states[i, 10:13] = 0.0  # Angular velocity
 
         # Commit the changes to the simulator
         self.gym.set_actor_root_state_tensor(self.sim, self.root_state_tensor)
 
+        # Debug: Print the updated states
+        print("Updated root states:", self.root_states)
+
         return self._get_observation()
+
 
     def step(self, actions):
         # Adjust velocities based on actions
@@ -199,6 +210,7 @@ obs = env.reset()
 
 while True: 
     actions = np.random.choice([0, 1, 2], size=1)  # Random actions
+    print("Actions:", actions)
     obs, rewards, dones, info = env.step(actions)
     env.render()
 
