@@ -1,0 +1,222 @@
+<sdf version='1.11'>
+  <model name='lander'>
+    <link name='base_link'>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>10</mass>
+        <inertia>
+          <ixx>1</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1</iyy>
+          <iyz>0</iyz>
+          <izz>1</izz>
+        </inertia>
+      </inertial>
+      <visual name='base_link_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>1 1 0.20000000000000001</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='leg1_PrismaticJoint' type='prismatic'>
+      <pose relative_to='base_link'>-0.24328179999999999 0.28071259999999998 0.58618700000000001 0.0094365000000000039 -0.010089299999999999 0.066407400000000019</pose>
+      <parent>base_link</parent>
+      <child>leg1_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0.20000000000000001</upper>
+          <effort>100</effort>
+          <velocity>1</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='leg1_link'>
+      <pose relative_to='leg1_PrismaticJoint'>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1</mass>
+        <inertia>
+          <ixx>0.10000000000000001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.10000000000000001</iyy>
+          <iyz>0</iyz>
+          <izz>0.10000000000000001</izz>
+        </inertia>
+      </inertial>
+      <collision name='leg1_link_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='leg1_link_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='leg2_PrismaticJoint' type='prismatic'>
+      <pose relative_to='base_link'>-0.2313453 1.682129 1.0053042000000001 0.56972 0.041867200000000021 -0.091057600000000002</pose>
+      <parent>base_link</parent>
+      <child>leg2_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0.20000000000000001</upper>
+          <effort>100</effort>
+          <velocity>1</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='leg2_link'>
+      <pose relative_to='leg2_PrismaticJoint'>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1</mass>
+        <inertia>
+          <ixx>0.10000000000000001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.10000000000000001</iyy>
+          <iyz>0</iyz>
+          <izz>0.10000000000000001</izz>
+        </inertia>
+      </inertial>
+      <collision name='leg2_link_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='leg2_link_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='leg3_PrismaticJoint' type='prismatic'>
+      <pose relative_to='base_link'>-1.4118276000000001 0.1897153 0.92373799999999995 0.0056381000000000157 0.57104020000000022 0.070904799999999976</pose>
+      <parent>base_link</parent>
+      <child>leg3_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0.20000000000000001</upper>
+          <effort>100</effort>
+          <velocity>1</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='leg3_link'>
+      <pose relative_to='leg3_PrismaticJoint'>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1</mass>
+        <inertia>
+          <ixx>0.10000000000000001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.10000000000000001</iyy>
+          <iyz>0</iyz>
+          <izz>0.10000000000000001</izz>
+        </inertia>
+      </inertial>
+      <collision name='leg3_link_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='leg3_link_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='leg4_PrismaticJoint' type='prismatic'>
+      <pose relative_to='base_link'>-1.399891 1.5911317 1.3428552 0.66470650000000009 0.52082610000000018 0.25588159999999999</pose>
+      <parent>base_link</parent>
+      <child>leg4_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0.20000000000000001</upper>
+          <effort>100</effort>
+          <velocity>1</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='leg4_link'>
+      <pose relative_to='leg4_PrismaticJoint'>0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1</mass>
+        <inertia>
+          <ixx>0.10000000000000001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.10000000000000001</iyy>
+          <iyz>0</iyz>
+          <izz>0.10000000000000001</izz>
+        </inertia>
+      </inertial>
+      <collision name='leg4_link_collision'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name='leg4_link_visual'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.29999999999999999 0.29999999999999999 0.80000000000000004</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>
