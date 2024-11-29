@@ -1,217 +1,144 @@
 from isaacgym import gymapi, gymtorch
 import torch
-import numpy as np
 
-
-class LunarLanderEnv:
-    def __init__(self, num_envs=1, sim_device="cuda:0", urdf_path="../models/lander.urdf"):
+class MotorSimulation:
+    def __init__(self, num_envs, motor_names, dt, device="cuda:0"):
         self.num_envs = num_envs
-        self.sim_device = sim_device
-        self.dt = 1.0 / 60.0
-        self.urdf_path = urdf_path
+        self.dt = dt
+        self.device = device
 
-        # Initialize Gym API
+        # Initialize Isaac Gym
         self.gym = gymapi.acquire_gym()
+        self.sim = None
+        self.viewer = None
+        self.envs = []
+        self.actors = []
+        self.motor_names = motor_names  # List of joint names for the prismatic joints
+        self.motor_dof_indices = []  # List of lists: DOF indices per actor
 
         # Simulation parameters
-        # sim_params = gymapi.SimParams()
-        # sim_params.dt = self.dt
-        # sim_params.use_gpu_pipeline = False
-        # sim_params.gravity = gymapi.Vec3(0.0, -9.81, 0.0)  # Gravity applied
+        self.sim_params = gymapi.SimParams()
+        self.sim_params.gravity = gymapi.Vec3(0.0, 0.0, -9.81)  # Gravity along -Z
+        self.sim_params.up_axis = gymapi.UP_AXIS_Z
+        self.sim_params.dt = dt
 
-        sim_params = gymapi.SimParams()
-        sim_params.dt = self.dt
-        sim_params.use_gpu_pipeline = False
-        sim_params.gravity = gymapi.Vec3(0.0, -9.81, 0.0)  # Gravity applied
-        sim_params.physx.num_position_iterations = 20
-        sim_params.physx.num_velocity_iterations = 1
-        sim_params.physx.contact_offset = 0.01
-        sim_params.physx.rest_offset = 0.0
-        sim_params.physx.bounce_threshold_velocity = 0.2
-        sim_params.physx.max_depenetration_velocity = 1.0
-        sim_params.physx.default_buffer_size_multiplier = 5
+        self.create_sim()
+        self.create_viewer()
 
+    def create_sim(self):
+        self.sim = self.gym.create_sim(0, 0, gymapi.SIM_PHYSX, self.sim_params)
 
-        # Create simulation
-        self.sim = self.gym.create_sim(0, 0, gymapi.SIM_PHYSX, sim_params)
-        if self.sim is None:
-            raise Exception("Failed to create simulation")
-
-        # Create environments
-        self.envs = []
-        self.landers = []
-        self._create_envs()
-
-        # Viewer
-        self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
-        if self.viewer is None:
-            raise Exception("Failed to create viewer")
-
-        # Set the camera position for the viewer
-        cam_pos = gymapi.Vec3(0.0, 15.0, 25.0)  # Adjust the values as needed
-        cam_target = gymapi.Vec3(0.0, 10.0, 0.0)  # Point towards your lander
-        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
-
-    def _create_envs(self):
-        spacing = 10.0
-        lower = gymapi.Vec3(-spacing, 0.0, -spacing)
-        upper = gymapi.Vec3(spacing, spacing, spacing)
-
-        # Add a ground plane
+        # Add ground plane
         plane_params = gymapi.PlaneParams()
-        plane_params.normal = gymapi.Vec3(0.0, 1.0, 0.0)  # Normal pointing upwards
-        plane_params.distance = 0.0  # Plane at y = 0
+        plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)  # Z-up
+        plane_params.static_friction = 1.0
+        plane_params.dynamic_friction = 1.0
+        plane_params.restitution = 0.5
         self.gym.add_ground(self.sim, plane_params)
 
-        # Load the URDF model
+        # Add robot assets
+        spacing = 2.0
+        lower = gymapi.Vec3(-spacing, -spacing, 0.0)
+        upper = gymapi.Vec3(spacing, spacing, spacing)
+
         asset_root = "."
-        asset_file = self.urdf_path
+        asset_file = "lander.urdf"
         asset_options = gymapi.AssetOptions()
-        asset_options.fix_base_link = False  # Allow the robot to fall freely
-        asset_options.armature = 0.01  # Small armature for stability
+        asset_options.fix_base_link = False  # Allow robot to move
+        robot_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
 
-        lander_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
-        if lander_asset is None:
-            raise Exception(f"Failed to load asset from {asset_file}")
-
-        # Debug: Print the link names
-        link_names = self.gym.get_asset_rigid_body_names(lander_asset)
-        print("Rigid Body Link Names:")
-        for link_name in link_names:
-            print(link_name)
-
-        # Create environments and place the lander in each
         for i in range(self.num_envs):
-            env = self.gym.create_env(self.sim, lower, upper, 1)
+            env = self.gym.create_env(self.sim, lower, upper, self.num_envs)
+            pose = gymapi.Transform()
+            pose.p = gymapi.Vec3(0.0, 0.0, 5.0)
+            actor = self.gym.create_actor(env, robot_asset, pose, "robot", i, 1)
             self.envs.append(env)
+            self.actors.append(actor)
 
-            start_pose = gymapi.Transform()
-            start_pose.p = gymapi.Vec3(0.0, 10.0, 0.0)  # Start position above ground
-            start_pose.r = gymapi.Quat(0.707, 0.0, 0.0, 0.707)  # 90° rotation about X-axis
+            # Configure DOF properties for effort control
+            dof_props = self.gym.get_actor_dof_properties(env, actor)
+            for j in range(len(dof_props)):
+                dof_props['driveMode'][j] = gymapi.DOF_MODE_EFFORT
+                dof_props['stiffness'][j] = 0.0
+                dof_props['damping'][j] = 0.0
+            self.gym.set_actor_dof_properties(env, actor, dof_props)
 
-            lander_handle = self.gym.create_actor(env, lander_asset, start_pose, "lander", i, 1)
-            self.landers.append(lander_handle)
+            # Get DOF indices for the specified motor names
+            dof_dict = self.gym.get_actor_dof_dict(env, actor)
+            motor_indices = []
+            for motor_name in self.motor_names:
+                if motor_name in dof_dict:
+                    motor_indices.append(dof_dict[motor_name])
+                else:
+                    raise ValueError(f"Motor name '{motor_name}' not found in actor's DOFs.")
+            self.motor_dof_indices.append(motor_indices)
 
-            # Debug: Print actor properties after creating the actor
-            self._debug_actor_properties(env, lander_handle)
-
-    def _debug_actor_properties(self, env, actor_handle):
-        # Acquire the root state tensor for debugging
-        state = self.gym.get_actor_rigid_body_states(env, actor_handle, gymapi.STATE_ALL)
-        print("Actor Initial State:")
-        for i, body_state in enumerate(state):
-            print(f"Body {i}: Position = {body_state['pose']['p']}, Orientation = {body_state['pose']['r']}")
-
-
-    def reset(self):
-        self.gym.simulate(self.sim)
-        self.gym.fetch_results(self.sim, True)
-
-        # Acquire the root state tensor if it doesn't exist
-        if not hasattr(self, "root_state_tensor"):
-            self.root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
-            self.root_states = gymtorch.wrap_tensor(self.root_state_tensor)
-
-        # Reset positions, orientations, and velocities for all environments
-        for i in range(self.num_envs):
-            self.root_states[i, 0:3] = torch.tensor([0.0, 10.0, 0.0], device=self.sim_device)  # Position
-            self.root_states[i, 3:7] = torch.tensor([-0.707, 0.0, 0.0, 0.707], device=self.sim_device)  # Orientation (90° rotation about X-axis)
-            self.root_states[i, 7:10] = 0.0  # Linear velocity
-            self.root_states[i, 10:13] = 0.0  # Angular velocity
-
-        # Commit the changes to the simulator
-        self.gym.set_actor_root_state_tensor(self.sim, self.root_state_tensor)
-
-        # Debug: Print the updated states
-        print("Updated root states:", self.root_states)
-
-        return self._get_observation()
-
+    def create_viewer(self):
+        self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+        if self.viewer is None:
+            raise ValueError("Failed to create viewer")
 
     def step(self, actions):
-        # Adjust velocities based on actions
-        for i, action in enumerate(actions):
-            if action == 0:  # Main thrust
-                self.root_states[i, 7] += 0.0  # vx
-                self.root_states[i, 8] += 0.5  # vy
-                self.root_states[i, 9] += 0.0  # vz
-            elif action == 1:  # Left thrust
-                self.root_states[i, 7] += -0.1
-                self.root_states[i, 8] += 0.3
-                self.root_states[i, 9] += 0.0
-            elif action == 2:  # Right thrust
-                self.root_states[i, 7] += 0.1
-                self.root_states[i, 8] += 0.3
-                self.root_states[i, 9] += 0.0
+        """
+        Apply actions to the motors and simulate one step.
+        """
+        for i, env in enumerate(self.envs):
+            actor = self.actors[i]
 
-        # Commit the changes to the simulator
-        self.gym.set_actor_root_state_tensor(self.sim, self.root_state_tensor)
+            # Initialize DOF efforts to zeros for all DOFs
+            num_dofs = self.gym.get_actor_dof_count(env, actor)
+            dof_efforts = torch.zeros(num_dofs, device=self.device)
 
-        # Step simulation
+            # Apply actions to the specified motor DOFs
+            for j, dof_index in enumerate(self.motor_dof_indices[i]):
+                if dof_index < num_dofs:  # Ensure index is within bounds
+                    dof_efforts[dof_index] = actions[i, j]
+                else:
+                    print(f"Warning: DOF index {dof_index} out of bounds for actor {i}.")
+
+            # Convert the PyTorch tensor to a NumPy array
+            dof_efforts_np = dof_efforts.cpu().numpy()
+
+            # Apply the efforts to the actor
+            self.gym.apply_actor_dof_efforts(env, actor, dof_efforts_np)
+
+        # Simulate one step
         self.gym.simulate(self.sim)
         self.gym.fetch_results(self.sim, True)
 
-        # Get observations, rewards, and done flags
-        obs = self._get_observation()
-        rewards = self._get_rewards()
-        dones = self._get_dones()
-        return obs, rewards, dones, {}
+        # Update the viewer
+        self.gym.step_graphics(self.sim)
+        self.gym.draw_viewer(self.viewer, self.sim, True)
 
-    def render(self):
-        if not self.gym.query_viewer_has_closed(self.viewer):
-            self.gym.step_graphics(self.sim)
-            self.gym.draw_viewer(self.viewer, self.sim, True)
-            self.gym.sync_frame_time(self.sim)
-        else:
-            self.close()
-
-    def close(self):
-        self.gym.destroy_viewer(self.viewer)
-        self.gym.destroy_sim(self.sim)
-
-    def _get_observation(self):
-        obs = []
-        for env, lander in zip(self.envs, self.landers):
-            state = self.gym.get_actor_rigid_body_states(env, lander, gymapi.STATE_ALL)
-
-            # Extract structured data fields
-            position = np.array([state['pose']['p']['x'], state['pose']['p']['y'], state['pose']['p']['z']], dtype=np.float32)
-            velocity = np.array([state['vel']['linear']['x'], state['vel']['linear']['y'], state['vel']['linear']['z']], dtype=np.float32)
-            angle = np.array([state['pose']['r']['x'], state['pose']['r']['y'], state['pose']['r']['z'], state['pose']['r']['w']], dtype=np.float32)
-            angular_velocity = np.array([state['vel']['angular']['x'], state['vel']['angular']['y'], state['vel']['angular']['z']], dtype=np.float32)
-
-            # Concatenate the arrays
-            obs.append(np.concatenate([position, velocity, angle, angular_velocity]))
-
-        return np.array(obs, dtype=np.float32)
-
-    def _get_rewards(self):
-        rewards = []
-        for env, lander in zip(self.envs, self.landers):
-            state = self.gym.get_actor_rigid_body_states(env, lander, gymapi.STATE_ALL)
-            position = np.array([state['pose']['p']['x'], state['pose']['p']['y'], state['pose']['p']['z']], dtype=np.float32)
-            reward = -np.linalg.norm(position)  # Negative distance from origin
-            rewards.append(reward)
-        return np.array(rewards)
-
-    def _get_dones(self):
-        dones = []
-        for env, lander in zip(self.envs, self.landers):
-            state = self.gym.get_actor_rigid_body_states(env, lander, gymapi.STATE_ALL)
-            y_position = state['pose']['p']['y']
-            done = y_position <= 0.0  # Y position below ground
-            dones.append(done)
-        return np.array(dones)
+    def cleanup(self):
+        if self.viewer is not None:
+            self.gym.destroy_viewer(self.viewer)
+        if self.sim is not None:
+            self.gym.destroy_sim(self.sim)
 
 
-# Usage Example
-env = LunarLanderEnv(num_envs=1, urdf_path="lander.urdf")
-obs = env.reset()
+# Example configuration
+num_envs = 4
+motor_names = [
+    "leg1_PrismaticJoint",
+    "leg2_PrismaticJoint",
+    "leg3_PrismaticJoint",
+    "leg4_PrismaticJoint",
+]
+dt = 0.02
 
-while True: 
-    actions = np.random.choice([0, 1, 2], size=1)  # Random actions
-    print("Actions:", actions)
-    obs, rewards, dones, info = env.step(actions)
-    env.render()
+if __name__ == "__main__":
+    motor_sim = MotorSimulation(num_envs, motor_names, dt)
 
-env.close()
+    try:
+        for step in range(10000):
+            # Generate random actions for each motor in each environment
+            actions = torch.rand((num_envs, len(motor_names)), device="cuda:0") * 10000.0 - 5000.0
+            motor_sim.step(actions)
+            print(f"Step {step + 1}: Actions: {actions}")
+
+            # Exit if viewer is closed
+            if motor_sim.gym.query_viewer_has_closed(motor_sim.viewer):
+                break
+    finally:
+        motor_sim.cleanup()
