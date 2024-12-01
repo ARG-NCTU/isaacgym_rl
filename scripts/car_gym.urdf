@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="car">
+  <joint name="wheel1_RevoluteJoint" type="continuous">
+    <origin xyz="-0.121059 -0.9562182 0.9562215" rpy="3.1415927 0. 0. " />
+    <parent link="car" />
+    <child link="wheel1_link" />
+    <axis xyz="0. 0. 1." />
+  </joint>
+  <joint name="wheel2_RevoluteJoint" type="continuous">
+    <origin xyz="-1.9546369 -0.9562182 0.9562215" rpy="3.1415927 0. 0. " />
+    <parent link="car" />
+    <child link="wheel2_link" />
+    <axis xyz="0. 0. 1." />
+  </joint>
+  <joint name="wheel3_RevoluteJoint" type="continuous">
+    <origin xyz="-0.121059 -0.9562182 -0.9925819" rpy="3.1415927 0. 0. " />
+    <parent link="car" />
+    <child link="wheel3_link" />
+    <axis xyz="0. 0. 1." />
+  </joint>
+  <joint name="wheel4_RevoluteJoint" type="continuous">
+    <origin xyz="-1.95464 -0.9562182 -0.9925819" rpy="3.1415927 0. 0. " />
+    <parent link="car" />
+    <child link="wheel4_link" />
+    <axis xyz="0. 0. 1." />
+  </joint>
+  <link name="car">
+    <visual>
+      <origin xyz="-0.97732 -0.9744 -0.0181818" rpy="1.5707964 0. 0. " />
+      <geometry>
+        <box size="2.5 1.5 0.8" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.97732 -0.9744 -0.0181818" rpy="1.5707964 0. 0. " />
+      <geometry>
+        <box size="2.5 1.5 0.8" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="wheel1_link">
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="wheel2_link">
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="wheel3_link">
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="wheel4_link">
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.6" length="0.4" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+</robot>

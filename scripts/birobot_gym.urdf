@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="birobot">
+  <joint name="left_joint1_RevoluteJoint" type="revolute">
+    <origin xyz="0. 0. -0.9116406" rpy="0. 0. 0." />
+    <parent link="bipedal_robot" />
+    <child link="left_joint1_link" />
+    <axis xyz="0. 1. 0." />
+    <limit lower="-2.6179939" upper="-0.5235988" />
+  </joint>
+  <joint name="left_joint2_RevoluteJoint" type="revolute">
+    <origin xyz="0. 0. -1.281234" rpy="0. 0. 0." />
+    <parent link="left_joint1_link" />
+    <child link="left_joint2_link" />
+    <axis xyz="0. 1. 0." />
+    <limit lower="-2.6179939" upper="-0.5235988" />
+  </joint>
+  <joint name="right_joint1_RevoluteJoint" type="revolute">
+    <origin xyz="0. -1.2 -0.9116406" rpy="0. 0. 0." />
+    <parent link="bipedal_robot" />
+    <child link="right_joint1_link" />
+    <axis xyz="0. 1. 0." />
+    <limit lower="-2.6179939" upper="-0.5235988" />
+  </joint>
+  <joint name="right_joint2_RevoluteJoint" type="revolute">
+    <origin xyz="0. 0.0000001 -1.281234 " rpy="0. 0. 0." />
+    <parent link="right_joint1_link" />
+    <child link="right_joint2_link" />
+    <axis xyz="0. 1. 0." />
+    <limit lower="-2.6179939" upper="-0.5235988" />
+  </joint>
+  <link name="bipedal_robot">
+    <visual>
+      <origin xyz="0. -0.6 -0.4558203" rpy="0. 0. 0." />
+      <geometry>
+        <mesh filename="meshes/body.obj" scale="0.8 0.8 1.5" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. -0.6 -0.4558203" rpy="0. 0. 0." />
+      <geometry>
+        <mesh filename="meshes/body.obj" scale="0.8 0.8 1.5" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="left_joint1_link">
+    <visual>
+      <origin xyz="0. 0. -0.640617" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. -0.640617" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="left_joint2_link">
+    <visual>
+      <origin xyz="0. -0. -0.4848881" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. -0. -0.4848881" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="right_joint1_link">
+    <visual>
+      <origin xyz="0. 0. -0.640617" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. -0.640617" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+  <link name="right_joint2_link">
+    <visual>
+      <origin xyz="0. -0. -0.4848881" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. -0. -0.4848881" rpy="0. 0. 0." />
+      <geometry>
+        <cylinder radius="0.25" length="1.2" />
+      </geometry>
+    </collision>
+  <inertial><mass value="5.0" /><origin xyz="0. 0. 0." rpy="0. 0. 0." /><inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" /></inertial></link>
+</robot>

@@ -42,7 +42,7 @@ class MotorSimulation:
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = "."
-        asset_file = "birobot_gym.urdf"
+        asset_file = "car_gym.urdf"
         asset_options = gymapi.AssetOptions()
         asset_options.fix_base_link = False  # Allow robot to move
         robot_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
@@ -51,6 +51,7 @@ class MotorSimulation:
             env = self.gym.create_env(self.sim, lower, upper, self.num_envs)
             pose = gymapi.Transform()
             pose.p = gymapi.Vec3(0.0, 0.0, 3.0)
+            pose.r = gymapi.Quat(0.707, 0.0, 0.0, 0.707)
             actor = self.gym.create_actor(env, robot_asset, pose, "robot", i, 1)
             self.envs.append(env)
             self.actors.append(actor)
@@ -120,10 +121,10 @@ class MotorSimulation:
 # Example configuration
 num_envs = 1
 motor_names = [
-    # "left_joint1_RevoluteJoint",
-    # "left_joint2_RevoluteJoint",
-    # "right_joint1_RevoluteJoint",
-    # "right_joint2_RevoluteJoint",
+    # "wheel1_RevoluteJoint",
+    # "wheel2_RevoluteJoint",
+    # "wheel3_RevoluteJoint",
+    # "wheel4_RevoluteJoint",
 ]
 dt = 0.02
 
