@@ -120,10 +120,10 @@ class MotorSimulation:
 # Example configuration
 num_envs = 1
 motor_names = [
-    # "left_joint1_RevoluteJoint",
-    # "left_joint2_RevoluteJoint",
-    # "right_joint1_RevoluteJoint",
-    # "right_joint2_RevoluteJoint",
+    "left_joint1_RevoluteJoint",
+    "left_joint2_RevoluteJoint",
+    "right_joint1_RevoluteJoint",
+    "right_joint2_RevoluteJoint",
 ]
 dt = 0.02
 

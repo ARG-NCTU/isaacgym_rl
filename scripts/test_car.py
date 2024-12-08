@@ -1,7 +1,7 @@
 from isaacgym import gymapi, gymtorch
 import torch
 
-class MotorSimulation:
+class CarSimulation:
     def __init__(self, num_envs, motor_names, dt, device="cuda:0"):
         self.num_envs = num_envs
         self.dt = dt
@@ -121,20 +121,21 @@ class MotorSimulation:
 # Example configuration
 num_envs = 1
 motor_names = [
-    # "wheel1_RevoluteJoint",
-    # "wheel2_RevoluteJoint",
-    # "wheel3_RevoluteJoint",
-    # "wheel4_RevoluteJoint",
+    "wheel1_RevoluteJoint",
+    "wheel2_RevoluteJoint",
+    "wheel3_RevoluteJoint",
+    "wheel4_RevoluteJoint",
 ]
 dt = 0.02
 
 if __name__ == "__main__":
-    motor_sim = MotorSimulation(num_envs, motor_names, dt)
+    motor_sim = CarSimulation(num_envs, motor_names, dt)
 
     try:
         for step in range(10000):
             # Generate random actions for each motor in each environment
             actions = torch.rand((num_envs, len(motor_names)), device="cuda:0") * 50.0 - 25.0
+            actions[:,:] = 10.0
             motor_sim.step(actions)
             print(f"Step {step + 1}: Actions: {actions}")
 

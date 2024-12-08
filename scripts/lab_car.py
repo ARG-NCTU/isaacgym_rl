@@ -1,14 +1,15 @@
 from isaacgym import gymapi, gymtorch
+from pykeyboard import KeyboardInput
 import torch
 
-class MotorSimulation:
+class CarSimulation:
     def __init__(self, num_envs, motor_names, dt, device="cuda:0"):
         self.num_envs = num_envs
         self.dt = dt
         self.device = device
 
         # Initialize Isaac Gym
-        self.gym = gymapi.acquire_gym()
+        self.gym = gymapi.acquire_gym() # acquire_gym() is a function that returns a gym object
         self.sim = None
         self.viewer = None
         self.envs = []
@@ -26,7 +27,7 @@ class MotorSimulation:
         self.create_viewer()
 
     def create_sim(self):
-        self.sim = self.gym.create_sim(0, 0, gymapi.SIM_PHYSX, self.sim_params)
+        self.sim = self.gym.create_sim(0, 0, gymapi.SIM_PHYSX, self.sim_params) # create_sim() is a function that creates a simulation object
 
         # Add ground plane
         plane_params = gymapi.PlaneParams()
@@ -42,7 +43,7 @@ class MotorSimulation:
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = "."
-        asset_file = "lander.urdf"
+        asset_file = "car_gym.urdf"
         asset_options = gymapi.AssetOptions()
         asset_options.fix_base_link = False  # Allow robot to move
         robot_asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
@@ -50,7 +51,8 @@ class MotorSimulation:
         for i in range(self.num_envs):
             env = self.gym.create_env(self.sim, lower, upper, self.num_envs)
             pose = gymapi.Transform()
-            pose.p = gymapi.Vec3(0.0, 0.0, 5.0)
+            pose.p = gymapi.Vec3(0.0, 0.0, 3.0)
+            pose.r = gymapi.Quat(0.707, 0.0, 0.0, 0.707)
             actor = self.gym.create_actor(env, robot_asset, pose, "robot", i, 1)
             self.envs.append(env)
             self.actors.append(actor)
@@ -91,7 +93,7 @@ class MotorSimulation:
 
             # Apply actions to the specified motor DOFs
             for j, dof_index in enumerate(self.motor_dof_indices[i]):
-                if dof_index < num_dofs:  # Ensure index is within bounds
+                if dof_index < num_dofs: # Ensure index is within bounds
                     dof_efforts[dof_index] = actions[i, j]
                 else:
                     print(f"Warning: DOF index {dof_index} out of bounds for actor {i}.")
@@ -118,27 +120,47 @@ class MotorSimulation:
 
 
 # Example configuration
-num_envs = 4
 motor_names = [
-    "leg1_PrismaticJoint",
-    "leg2_PrismaticJoint",
-    "leg3_PrismaticJoint",
-    "leg4_PrismaticJoint",
+    "wheel1_RevoluteJoint",
+    "wheel2_RevoluteJoint",
+    "wheel3_RevoluteJoint",
+    "wheel4_RevoluteJoint",
 ]
 dt = 0.02
 
+# Initialize Keyboard Input
+keyboard_input = KeyboardInput()
+num_envs = 1
+
 if __name__ == "__main__":
-    motor_sim = MotorSimulation(num_envs, motor_names, dt)
-
+    motor_sim = CarSimulation(num_envs, motor_names, dt)
+    step = 0
     try:
-        for step in range(10000):
-            # Generate random actions for each motor in each environment
-            actions = torch.rand((num_envs, len(motor_names)), device="cuda:0") * 10000.0 - 5000.0
-            motor_sim.step(actions)
-            print(f"Step {step + 1}: Actions: {actions}")
+        while True:
+            step += 1
+            keyboard_input.handle_events()
+            actions = torch.tensor(
+                keyboard_input.get_actions(),
+                device="cuda:0"
+            ).unsqueeze(0)  # Add batch dimension
 
-            # Exit if viewer is closed
-            if motor_sim.gym.query_viewer_has_closed(motor_sim.viewer):
+            ################ Write your code here ################
+            '''
+            Task: Map the input [up, down, left, right] to the Car Movements [forward, backward, left, right]
+            Input Variable: actions: 1x4 tensor [up, down, left, right]
+            Output Variable: actions: 1x4 tensor [Wheel1, Wheel2, Wheel3, Wheel4]
+            '''
+
+
+            ######################################################
+            
+            actions = actions.repeat(num_envs, 1)
+            motor_sim.step(actions)
+            print(f"Step {step + 1}: Actions: {actions.cpu().numpy()}")
+
+            # Exit if viewer is closed or pygame window is closed
+            if motor_sim.gym.query_viewer_has_closed(motor_sim.viewer) or not keyboard_input.running:
                 break
     finally:
         motor_sim.cleanup()
+        keyboard_input.quit()
