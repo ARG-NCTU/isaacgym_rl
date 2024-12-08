@@ -62,7 +62,7 @@ Modify the section marked with:
 ################ Write your code here ################
 '''
 Task: Map the input [up, down, left, right] to the Car Movements [forward, backward, left, right]
-Input Variable: actions: 1x4 tensor [up, down, left, right]
+Input Variable: input_key: 1x4 tensor [up, down, left, right]
 Output Variable: actions: 1x4 tensor [Wheel1, Wheel2, Wheel3, Wheel4]
 '''
 ######################################################

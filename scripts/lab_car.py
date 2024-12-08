@@ -139,15 +139,13 @@ if __name__ == "__main__":
         while True:
             step += 1
             keyboard_input.handle_events()
-            actions = torch.tensor(
-                keyboard_input.get_actions(),
-                device="cuda:0"
-            ).unsqueeze(0)  # Add batch dimension
+            input_key = keyboard_input.get_actions()
+            actions = torch.zeros(1, 4, device="cuda:0")
 
             ################ Write your code here ################
             '''
             Task: Map the input [up, down, left, right] to the Car Movements [forward, backward, left, right]
-            Input Variable: actions: 1x4 tensor [up, down, left, right]
+            Input Variable: input_key: 1x4 tensor [up, down, left, right]
             Output Variable: actions: 1x4 tensor [Wheel1, Wheel2, Wheel3, Wheel4]
             '''
 
