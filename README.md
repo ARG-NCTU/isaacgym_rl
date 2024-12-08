@@ -3,7 +3,7 @@
 ## Clone this repo
 ```bash
 cd ~
-git clone 
+git clone https://github.com/ARG-NCTU/isaacgym_rl.git
 ```
 ---
 
